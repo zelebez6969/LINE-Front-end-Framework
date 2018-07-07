@@ -1,0 +1,83 @@
+{% extends "bootstrap/base.html" %} 
+{%- block metas %}
+    <meta name="vieport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scaleable=0"> 
+{%- endblock metas %} 
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+    crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@2.3.2/dist/signature_pad.min.js"></script>
+<script>
+    const canvas = document.querySelector('#canvas');
+    const signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'rgba(240,240,240,1)',
+        minWidth: 3,
+        maxWidth: 7,
+    })
+    $(window).on('load', function () {
+        canvas.setAttribute('width', $('.container-fluid').width());
+        canvas.setAttribute('height', window.innerHeight - $('#btn').outerHeight() - 10);
+        signaturePad.clear();
+        liff.init(function (data) { });
+    });
+</script>
+<script src="https://d.line-scdn.net/liff/1.0/sdk.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+    $("#btn__undo").on('click', function (e) {
+        var data = signaturePad.toData();
+        if (data) {
+            data.pop();
+            signaturePad.fromData(data);
+        }
+    })
+    $('#btn').on('click', function () {
+        $.ajax({
+            type: 'POST',
+            url: '/saveimage',
+            data: {
+                'image': signaturePad.toDataURL('image/jpeg')
+            },
+            success: function (res, status) {
+                liff.getProfile().then(function (profile) {
+                    liff.sendMessages([
+                        {
+                            type: 'image',
+                            originalContentUrl: 'https://drawr.serveo.net/imgs/' + res + '.jpg',
+                            previewImageUrl: 'https://drawr.serveo.net/imgs/' + res + '_240.jpg'
+                        },
+                        {
+                            type: 'text',
+                            text: 'Sender: ' + profile.displayName
+                        }
+                    ]).then(function () {
+                        liff.closeWindow();
+                    }).catch(function (error) {
+                        window.alert("Error getting profile: " + error.message);
+                    })
+                })
+            },
+            error: function (res) {
+                window.alert('Error saving image: ' + res.status);
+            },
+            complete: function (data) {
+            }
+        });
+    });
+</script> 
+{% endblock scripts %} 
+
+{% block title %}DRAWR{% endblock title %} 
+
+{% block content %}
+<div class="container-fluid">
+    <canvas id="canvas"></canvas>
+    <div class="row">
+        <div class="col col-sm-6">
+            <button id="btn__undo" class="btn btn-primary btn-block btn-lg" type="button">Undo</button>
+        </div>
+        <div class="col col-sm-6">
+            <button id="btn" class="btn btn-primary btn-block btn-lg" type="button">Send</button>
+        </div>
+    </div>
+</div>
+{% endblock content %}
